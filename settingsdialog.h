@@ -24,4 +24,4 @@ private:
     QSettings settings;
 };
 
-#endif // SETTINGSDIALOG_H
+#endif

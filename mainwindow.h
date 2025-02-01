@@ -9,7 +9,7 @@ class MainWindow;
 
 class MainWindow : public QMainWindow
 {
-    Q_OBJECT  // This line is important
+    Q_OBJECT
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
@@ -17,10 +17,10 @@ public:
 
 private slots:
     void on_actionExit_triggered();
-    void openSettings();  // <-- Make sure this is here!
+    void openSettings();
 
 private:
     Ui::MainWindow *ui;
 };
 
-#endif // MAINWINDOW_H
+#endif

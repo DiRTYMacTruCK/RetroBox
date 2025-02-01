@@ -1,1 +1,0 @@
-/usr/bin/clang++-19 -DQT_QML_DEBUG -g CMakeFiles/jukebox.dir/jukebox_autogen/mocs_compilation.cpp.o CMakeFiles/jukebox.dir/main.cpp.o CMakeFiles/jukebox.dir/mainwindow.cpp.o CMakeFiles/jukebox.dir/settingsdialog.cpp.o -o jukebox  /usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5.15.15 /usr/lib/x86_64-linux-gnu/libQt5Gui.so.5.15.15 /usr/lib/x86_64-linux-gnu/libQt5Core.so.5.15.15

@@ -27,14 +27,27 @@
    <widget class="QPushButton" name="playButton">
     <property name="geometry">
      <rect>
-      <x>330</x>
-      <y>510</y>
+      <x>280</x>
+      <y>360</y>
       <width>88</width>
       <height>26</height>
      </rect>
     </property>
     <property name="text">
      <string>Play</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="labelTitle">
+    <property name="geometry">
+     <rect>
+      <x>290</x>
+      <y>520</y>
+      <width>66</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Playing:</string>
     </property>
    </widget>
   </widget>
@@ -51,7 +64,7 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionOpen_Library"/>
+    <addaction name="actionOpenLibrary"/>
     <addaction name="actionSettings"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
@@ -59,7 +72,7 @@
    <addaction name="menuFile"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <action name="actionOpen_Library">
+  <action name="actionOpenLibrary">
    <property name="text">
     <string>Open Library</string>
    </property>

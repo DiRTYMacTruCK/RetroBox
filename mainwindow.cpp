@@ -101,19 +101,15 @@ void MainWindow::on_playButton_clicked()
 void MainWindow::on_songSelected(QListWidgetItem *item)
 {
     QString filePath = item->data(Qt::UserRole).toString();
+
+    // Set media file using setMedia()
     mediaPlayer->setMedia(QUrl::fromLocalFile(filePath));
 
-    // Retrieve the metadata after the media is loaded
-    QString title = mediaPlayer->metaData(QMediaMetaData::Title).toString();
-    QString artist = mediaPlayer->metaData(QMediaMetaData::Author).toString();
-    QString album = mediaPlayer->metaData(QMediaMetaData::AlbumTitle).toString();
+    // Manually update metadata
+    on_metaDataChanged();
 
-    QString metadataText = QString("Title: %1\nArtist: %2\nAlbum: %3")
-                               .arg(title.isEmpty() ? "Unknown Title" : title)
-                               .arg(artist.isEmpty() ? "Unknown Artist" : artist)
-                               .arg(album.isEmpty() ? "Unknown Album" : album);
-
-    QMessageBox::information(this, "Song Metadata", metadataText);
+    // Start playing
+    mediaPlayer->play();
 }
 
 void MainWindow::fetchMetadata(const QString &filePath, QString &title, QString &artist, QString &album)

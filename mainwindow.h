@@ -3,7 +3,7 @@
 
 #include <QMainWindow>
 #include <QMediaPlayer>
-#include <QVector>  // Better for indexed playlist handling
+#include <QVector>
 #include <QListWidgetItem>
 #include <QLabel>
 
@@ -22,19 +22,23 @@ public:
 private slots:
     void on_actionExit_triggered();
     void on_actionOpenLibrary_triggered();
-    void on_playButton_clicked();
     void on_songSelected(QListWidgetItem *item);
     void on_metaDataChanged();
     void on_mediaStatusChanged(QMediaPlayer::MediaStatus status);
-    void playNext();  // Handles playing the next song manually
+    void playNext();
     void on_positionChanged(qint64 position);
     void on_durationChanged(qint64 duration);
+    void playSelectedSong(QListWidgetItem *item);
+    void on_playButton_clicked();
+    void on_stopButton_clicked();
+    void on_nextButton_clicked();
+    void on_prevButton_clicked();
 
 private:
     Ui::MainWindow *ui;
     QMediaPlayer *mediaPlayer;
-    QVector<QString> trackList;  // Replaces QMediaPlaylist with manual playlist handling
-    int currentTrackIndex = 0;   // Ensure it's initialized
+    QVector<QString> trackList;
+    int currentTrackIndex = 0;
     QLabel *nowPlayingLabel;
     QLabel *titleLabel;
     QLabel *artistLabel;

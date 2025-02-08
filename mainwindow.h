@@ -3,8 +3,9 @@
 
 #include <QMainWindow>
 #include <QMediaPlayer>
-#include <QStringList>
+#include <QVector>  // Better for indexed playlist handling
 #include <QListWidgetItem>
+#include <QLabel>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -15,7 +16,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
 private slots:
@@ -25,12 +26,19 @@ private slots:
     void on_songSelected(QListWidgetItem *item);
     void on_metaDataChanged();
     void on_mediaStatusChanged(QMediaPlayer::MediaStatus status);
+    void playNext();  // Handles playing the next song manually
 
 private:
     Ui::MainWindow *ui;
     QMediaPlayer *mediaPlayer;
-    QStringList trackList;  // Replaces QMediaPlaylist
-    int currentTrackIndex;
+    QVector<QString> trackList;  // Replaces QMediaPlaylist with manual playlist handling
+    int currentTrackIndex = 0;   // Ensure it's initialized
+
+    QLabel *nowPlayingLabel;
+    QLabel *titleLabel;
+    QLabel *artistLabel;
+    QLabel *albumLabel;
+    QLabel *yearLabel;
 };
 
 #endif // MAINWINDOW_H

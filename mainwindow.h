@@ -3,7 +3,7 @@
 
 #include <QMainWindow>
 #include <QMediaPlayer>
-#include <QMediaPlaylist>
+#include <QStringList>
 #include <QListWidgetItem>
 
 QT_BEGIN_NAMESPACE
@@ -23,15 +23,14 @@ private slots:
     void on_actionOpenLibrary_triggered();
     void on_playButton_clicked();
     void on_songSelected(QListWidgetItem *item);
-    void on_mediaStatusChanged(QMediaPlayer::MediaStatus status);
-    void openSettings();
     void on_metaDataChanged();
-    void fetchMetadata(const QString &filePath, QString &title, QString &artist, QString &album);
+    void on_mediaStatusChanged(QMediaPlayer::MediaStatus status);
 
 private:
     Ui::MainWindow *ui;
     QMediaPlayer *mediaPlayer;
-    QMediaPlaylist *playlist;
+    QStringList trackList;  // Replaces QMediaPlaylist
+    int currentTrackIndex;
 };
 
 #endif // MAINWINDOW_H

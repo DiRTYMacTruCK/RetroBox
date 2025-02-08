@@ -58,6 +58,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->stopButton, &QPushButton::clicked, this, &MainWindow::on_stopButton_clicked);
     connect(ui->nextButton, &QPushButton::clicked, this, &MainWindow::on_nextButton_clicked);
     connect(ui->prevButton, &QPushButton::clicked, this, &MainWindow::on_prevButton_clicked);
+    connect(ui->actionAboutRetroBox, &QAction::triggered, this, &MainWindow::on_actionAboutRetroBox_triggered);
 
     qDebug() << "🔊 Audio output initialized. Player ready!";
 }
@@ -99,11 +100,16 @@ void MainWindow::on_actionOpenLibrary_triggered()
 void MainWindow::on_playButton_clicked()
 {
     if (mediaPlayer->playbackState() == QMediaPlayer::PlayingState) {
+        isPausedManually = true;  // ✅ Mark as manually paused
         mediaPlayer->pause();
-        qDebug() << "⏸ Playback paused.";
-    } else {
+        qDebug() << "⏸ Playback paused at position:" << mediaPlayer->position();
+        ui->playButton->setText("▶ Play");
+    }
+    else {
+        isPausedManually = false;  // ✅ Clear the flag when resuming
         mediaPlayer->play();
-        qDebug() << "▶ Playback started.";
+        qDebug() << "▶ Resuming playback from position:" << mediaPlayer->position();
+        ui->playButton->setText("⏸ Pause");
     }
 }
 
@@ -268,4 +274,27 @@ void MainWindow::playSelectedSong(QListWidgetItem *item)
         mediaPlayer->setSource(QUrl::fromLocalFile(selectedSongPath));  // Set the selected song
         mediaPlayer->play();  // Play the song
     }
+}
+void MainWindow::on_actionAboutRetroBox_triggered()
+{
+    QString aboutText =
+        "<html>"
+        "<body>"
+        "<div style='text-align: center;'>"
+        "<img src=':/resources/retrobox_v1.png' width='150' height='150'/>"  // ✅ Updated path
+        "<h2>RetroBox</h2>"
+        "<p><b>Version:</b> 0.1.2</p>"
+        "<p><b>Build Date:</b> " __DATE__ " " __TIME__ "</p>"
+        "<p><b>Developer:</b>DiRTY</p>"
+        "<p>RetroBox is an open-source music player built with Qt.</p>"
+        "<p><a href='https://github.com/dirtymactruck/RetroBox'>GitHub Repository</a></p>"
+        "</div>"
+        "</body>"
+        "</html>";
+
+    QMessageBox msgBox;
+    msgBox.setWindowTitle("About RetroBox");
+    msgBox.setTextFormat(Qt::RichText);  // ✅ Enables HTML rendering
+    msgBox.setText(aboutText);
+    msgBox.exec();
 }

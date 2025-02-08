@@ -99,7 +99,7 @@
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="actionAbout_RetroBox"/>
+    <addaction name="actionAboutRetroBox"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuHelp"/>
@@ -120,7 +120,7 @@
     <string>Exit</string>
    </property>
   </action>
-  <action name="actionAbout_RetroBox">
+  <action name="actionAboutRetroBox">
    <property name="text">
     <string>About RetroBox</string>
    </property>

@@ -13,7 +13,7 @@ QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
 {
-    Q_OBJECT
+    Q_OBJECT  // ✅ Ensure this macro is here
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
@@ -33,8 +33,9 @@ private slots:
     void on_stopButton_clicked();
     void on_nextButton_clicked();
     void on_prevButton_clicked();
+    void on_actionAboutRetroBox_triggered();
 
-private:
+private:  // ✅ Ensure `isPausedManually` is correctly placed in `private:`
     Ui::MainWindow *ui;
     QMediaPlayer *mediaPlayer;
     QVector<QString> trackList;
@@ -46,6 +47,7 @@ private:
     QLabel *yearLabel;
     QSlider *progressBar;
     QSlider *volumeSlider;
+    bool isPausedManually = false;  // ✅ Correct placement (outside `private slots:`)
 };
 
-#endif // MAINWINDOW_H
+#endif //

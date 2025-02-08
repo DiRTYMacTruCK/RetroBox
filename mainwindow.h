@@ -27,18 +27,21 @@ private slots:
     void on_metaDataChanged();
     void on_mediaStatusChanged(QMediaPlayer::MediaStatus status);
     void playNext();  // Handles playing the next song manually
+    void on_positionChanged(qint64 position);
+    void on_durationChanged(qint64 duration);
 
 private:
     Ui::MainWindow *ui;
     QMediaPlayer *mediaPlayer;
     QVector<QString> trackList;  // Replaces QMediaPlaylist with manual playlist handling
     int currentTrackIndex = 0;   // Ensure it's initialized
-
     QLabel *nowPlayingLabel;
     QLabel *titleLabel;
     QLabel *artistLabel;
     QLabel *albumLabel;
     QLabel *yearLabel;
+    QSlider *progressBar;
+    QSlider *volumeSlider;
 };
 
 #endif // MAINWINDOW_H

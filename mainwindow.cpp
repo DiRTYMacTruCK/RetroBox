@@ -12,6 +12,7 @@
 #include <QSlider>
 #include <QLabel>
 
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -52,13 +53,14 @@ MainWindow::MainWindow(QWidget *parent)
     connect(mediaPlayer, &QMediaPlayer::mediaStatusChanged, this, &MainWindow::on_mediaStatusChanged);
     connect(mediaPlayer, &QMediaPlayer::positionChanged, this, &MainWindow::on_positionChanged);
     connect(mediaPlayer, &QMediaPlayer::durationChanged, this, &MainWindow::on_durationChanged);
-    connect(ui->listWidget, &QListWidget::itemDoubleClicked, this, &MainWindow::playSelectedSong);
-    connect(ui->listWidget, &QListWidget::itemClicked, this, &MainWindow::on_songSelected); // ✅ Ensure this is connected
+    connect(ui->treeWidget, &QTreeWidget::itemDoubleClicked, this, &MainWindow::playSelectedSong);
+    connect(ui->treeWidget, &QTreeWidget::itemClicked, this, &MainWindow::on_treeItemClicked);
     connect(ui->playButton, &QPushButton::clicked, this, &MainWindow::on_playButton_clicked);
     connect(ui->stopButton, &QPushButton::clicked, this, &MainWindow::on_stopButton_clicked);
     connect(ui->nextButton, &QPushButton::clicked, this, &MainWindow::on_nextButton_clicked);
     connect(ui->prevButton, &QPushButton::clicked, this, &MainWindow::on_prevButton_clicked);
     connect(ui->actionAboutRetroBox, &QAction::triggered, this, &MainWindow::on_actionAboutRetroBox_triggered);
+    connect(ui->treeWidget, &QTreeWidget::itemDoubleClicked, this, &MainWindow::on_treeItemDoubleClicked);
 
     qDebug() << "🔊 Audio output initialized. Player ready!";
 }
@@ -72,31 +74,83 @@ void MainWindow::on_actionExit_triggered()
 {
     QApplication::quit();
 }
-
 void MainWindow::on_actionOpenLibrary_triggered()
 {
     QString directoryPath = QFileDialog::getExistingDirectory(this, tr("Open Library"), "",
                                                               QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (directoryPath.isEmpty()) return;
 
-    ui->listWidget->clear();
+    ui->treeWidget->clear();  // ✅ Clear existing list
     trackList.clear();
+
+    QMap<QString, QMap<QString, QStringList>> musicLibrary; // ✅ Organized as Artist → Album → Tracks
 
     QDirIterator it(directoryPath, {"*.mp3", "*.wav", "*.flac", "*.ogg"},
                     QDir::Files, QDirIterator::Subdirectories);
 
     while (it.hasNext()) {
         QString filePath = it.next();
-        QString displayText = QFileInfo(filePath).fileName();
+        QFileInfo fileInfo(filePath);
+        QString fileName = fileInfo.fileName();
 
-        QListWidgetItem *item = new QListWidgetItem(displayText);
-        item->setData(Qt::UserRole, filePath);
-        ui->listWidget->addItem(item);
+        // Extract metadata
+        QMediaPlayer tempPlayer;
+        tempPlayer.setSource(QUrl::fromLocalFile(filePath));
+        tempPlayer.metaDataChanged();  // Force metadata to load
 
-        trackList.append(filePath);
+        QString artist = tempPlayer.metaData().value(QMediaMetaData::ContributingArtist).toString();
+        QString album = tempPlayer.metaData().value(QMediaMetaData::AlbumTitle).toString();
+        QString title = tempPlayer.metaData().value(QMediaMetaData::Title).toString();
+
+        // Fallback if metadata is empty
+        if (artist.isEmpty()) artist = "Unknown Artist";
+        if (album.isEmpty()) album = "Unknown Album";
+        if (title.isEmpty()) title = fileName;
+
+        // Store in hierarchical map
+        musicLibrary[artist][album].append(filePath);
+    }
+
+    // ✅ Populate `QTreeWidget`
+    for (const QString &artist : musicLibrary.keys()) {
+        QTreeWidgetItem *artistItem = new QTreeWidgetItem(ui->treeWidget);
+        artistItem->setText(0, artist);
+
+        for (const QString &album : musicLibrary[artist].keys()) {
+            QTreeWidgetItem *albumItem = new QTreeWidgetItem(artistItem);
+            albumItem->setText(0, album);
+
+            for (const QString &track : musicLibrary[artist][album]) {
+                QTreeWidgetItem *trackItem = new QTreeWidgetItem(albumItem);
+                trackItem->setText(0, QFileInfo(track).fileName());
+                trackItem->setData(0, Qt::UserRole, track);  // Store file path in the item
+            }
+        }
     }
 }
 
+void MainWindow::on_treeItemClicked(QTreeWidgetItem *item, int column)
+{
+    if (!item) return;
+
+    QString filePath = item->data(0, Qt::UserRole).toString(); // Retrieve stored path
+
+    if (!filePath.isEmpty()) {
+        qDebug() << "Selected song: " << filePath;
+    }
+}
+void MainWindow::on_treeItemDoubleClicked(QTreeWidgetItem *item, int column)
+{
+    if (!item) return;  // Ensure an item is selected
+
+    QString filePath = item->data(0, Qt::UserRole).toString();  // Retrieve stored path
+
+    if (!filePath.isEmpty()) {
+        qDebug() << "Playing selected song: " << filePath;
+        mediaPlayer->setSource(QUrl::fromLocalFile(filePath));  // Set the selected song
+        mediaPlayer->play();  // Play the song
+    }
+}
 void MainWindow::on_playButton_clicked()
 {
     if (mediaPlayer->playbackState() == QMediaPlayer::PlayingState) {
@@ -145,32 +199,7 @@ void MainWindow::on_prevButton_clicked()
 }
 
 
-void MainWindow::on_songSelected(QListWidgetItem *item)
-{
-    if (!item) {
-        qDebug() << "Error: Selected item is null.";
-        return;
-    }
 
-    QString filePath = item->data(Qt::UserRole).toString();
-    qDebug() << "Selected file path: " << filePath;
-
-    if (filePath.isEmpty()) {
-        qDebug() << "Error: Empty file path!";
-        return;
-    }
-
-    mediaPlayer->stop();
-    mediaPlayer->setSource(QUrl::fromLocalFile(filePath));
-    mediaPlayer->play();
-
-    int index = trackList.indexOf(filePath);
-    if (index != -1) {
-        currentTrackIndex = index;
-    }
-
-    on_metaDataChanged();
-}
 
 void MainWindow::on_positionChanged(qint64 position)
 {
@@ -263,15 +292,15 @@ void MainWindow::playNext()
         mediaPlayer->play();
     }
 }
-void MainWindow::playSelectedSong(QListWidgetItem *item)
+void MainWindow::playSelectedSong(QTreeWidgetItem *item, int column)
 {
     if (!item) return;  // Ensure an item is selected
 
-    QString selectedSongPath = item->data(Qt::UserRole).toString();  // Retrieve stored path
+    QString filePath = item->data(0, Qt::UserRole).toString();  // Retrieve stored path
 
-    if (!selectedSongPath.isEmpty()) {
-        qDebug() << "Playing selected song: " << selectedSongPath;
-        mediaPlayer->setSource(QUrl::fromLocalFile(selectedSongPath));  // Set the selected song
+    if (!filePath.isEmpty()) {
+        qDebug() << "Playing selected song: " << filePath;
+        mediaPlayer->setSource(QUrl::fromLocalFile(filePath));  // Set the selected song
         mediaPlayer->play();  // Play the song
     }
 }

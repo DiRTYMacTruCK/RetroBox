@@ -6,6 +6,8 @@
 #include <QVector>
 #include <QListWidgetItem>
 #include <QLabel>
+#include <QTreeWidget>
+#include <QTreeWidgetItem>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -22,18 +24,19 @@ public:
 private slots:
     void on_actionExit_triggered();
     void on_actionOpenLibrary_triggered();
-    void on_songSelected(QListWidgetItem *item);
     void on_metaDataChanged();
     void on_mediaStatusChanged(QMediaPlayer::MediaStatus status);
     void playNext();
     void on_positionChanged(qint64 position);
     void on_durationChanged(qint64 duration);
-    void playSelectedSong(QListWidgetItem *item);
     void on_playButton_clicked();
     void on_stopButton_clicked();
     void on_nextButton_clicked();
     void on_prevButton_clicked();
     void on_actionAboutRetroBox_triggered();
+    void on_treeItemClicked(QTreeWidgetItem *item, int column);
+    void on_treeItemDoubleClicked(QTreeWidgetItem *item, int column);
+    void playSelectedSong(QTreeWidgetItem *item, int column);  // ✅ Ensure function matches definition
 
 private:  // ✅ Ensure `isPausedManually` is correctly placed in `private:`
     Ui::MainWindow *ui;
@@ -47,7 +50,8 @@ private:  // ✅ Ensure `isPausedManually` is correctly placed in `private:`
     QLabel *yearLabel;
     QSlider *progressBar;
     QSlider *volumeSlider;
+    QTreeWidget *treeWidget;
     bool isPausedManually = false;  // ✅ Correct placement (outside `private slots:`)
 };
 
-#endif //
+#endif // MAINWINDOW_H

@@ -4,10 +4,11 @@
 #include <QMainWindow>
 #include <QMediaPlayer>
 #include <QVector>
-#include <QListWidgetItem>
+#include <QListWidget>
 #include <QLabel>
-#include <QTreeWidget>
-#include <QTreeWidgetItem>
+#include <QMap>
+#include <QSlider>
+#include <QAudioOutput>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -15,7 +16,7 @@ QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
 {
-    Q_OBJECT  // ✅ Ensure this macro is here
+    Q_OBJECT
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
@@ -24,23 +25,24 @@ public:
 private slots:
     void on_actionExit_triggered();
     void on_actionOpenLibrary_triggered();
-    void on_metaDataChanged();
-    void on_mediaStatusChanged(QMediaPlayer::MediaStatus status);
-    void playNext();
-    void on_positionChanged(qint64 position);
-    void on_durationChanged(qint64 duration);
+    void on_artistSelected(QListWidgetItem *item);
+    void on_albumSelected(QListWidgetItem *item);
+    void on_trackSelected(QListWidgetItem *item);
     void on_playButton_clicked();
     void on_stopButton_clicked();
     void on_nextButton_clicked();
     void on_prevButton_clicked();
+    void on_positionChanged(qint64 position);
+    void on_durationChanged(qint64 duration);
+    void on_metaDataChanged();
+    void on_mediaStatusChanged(QMediaPlayer::MediaStatus status);
+    void playNext();
     void on_actionAboutRetroBox_triggered();
-    void on_treeItemClicked(QTreeWidgetItem *item, int column);
-    void on_treeItemDoubleClicked(QTreeWidgetItem *item, int column);
-    void playSelectedSong(QTreeWidgetItem *item, int column);  // ✅ Ensure function matches definition
 
-private:  // ✅ Ensure `isPausedManually` is correctly placed in `private:`
+private:
     Ui::MainWindow *ui;
     QMediaPlayer *mediaPlayer;
+    QMap<QString, QMap<QString, QStringList>> musicLibrary;
     QVector<QString> trackList;
     int currentTrackIndex = 0;
     QLabel *nowPlayingLabel;
@@ -50,8 +52,7 @@ private:  // ✅ Ensure `isPausedManually` is correctly placed in `private:`
     QLabel *yearLabel;
     QSlider *progressBar;
     QSlider *volumeSlider;
-    QTreeWidget *treeWidget;
-    bool isPausedManually = false;  // ✅ Correct placement (outside `private slots:`)
+    bool isPausedManually = false;
 };
 
 #endif // MAINWINDOW_H

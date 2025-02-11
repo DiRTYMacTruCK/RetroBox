@@ -11,7 +11,7 @@
 #include <QAudioOutput>
 #include <QSlider>
 #include <QLabel>
-
+#include <QTimer>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -34,6 +34,7 @@ MainWindow::MainWindow(QWidget *parent)
     volumeSlider->setRange(0, 100);
     volumeSlider->setValue(100);
 
+    // Manually setting the geometry
     nowPlayingLabel->setGeometry(20, 250, 200, 30);
     titleLabel->setGeometry(20, 280, 400, 30);
     artistLabel->setGeometry(20, 310, 400, 30);
@@ -49,21 +50,24 @@ MainWindow::MainWindow(QWidget *parent)
     connect(volumeSlider, &QSlider::valueChanged, this, [audioOutput](int value) {
         audioOutput->setVolume(value / 100.0);
     });
+
+    // ✅ Media Player & UI Button Connections
     connect(mediaPlayer, &QMediaPlayer::metaDataChanged, this, &MainWindow::on_metaDataChanged);
     connect(mediaPlayer, &QMediaPlayer::mediaStatusChanged, this, &MainWindow::on_mediaStatusChanged);
     connect(mediaPlayer, &QMediaPlayer::positionChanged, this, &MainWindow::on_positionChanged);
     connect(mediaPlayer, &QMediaPlayer::durationChanged, this, &MainWindow::on_durationChanged);
-    connect(ui->treeWidget, &QTreeWidget::itemDoubleClicked, this, &MainWindow::playSelectedSong);
-    connect(ui->treeWidget, &QTreeWidget::itemClicked, this, &MainWindow::on_treeItemClicked);
     connect(ui->playButton, &QPushButton::clicked, this, &MainWindow::on_playButton_clicked);
     connect(ui->stopButton, &QPushButton::clicked, this, &MainWindow::on_stopButton_clicked);
     connect(ui->nextButton, &QPushButton::clicked, this, &MainWindow::on_nextButton_clicked);
     connect(ui->prevButton, &QPushButton::clicked, this, &MainWindow::on_prevButton_clicked);
     connect(ui->actionAboutRetroBox, &QAction::triggered, this, &MainWindow::on_actionAboutRetroBox_triggered);
-    connect(ui->treeWidget, &QTreeWidget::itemDoubleClicked, this, &MainWindow::on_treeItemDoubleClicked);
+    connect(ui->listArtists, &QListWidget::itemClicked, this, &MainWindow::on_artistSelected);
+    connect(ui->listAlbums, &QListWidget::itemClicked, this, &MainWindow::on_albumSelected);
+    connect(ui->listTracks, &QListWidget::itemDoubleClicked, this, &MainWindow::on_trackSelected);
 
     qDebug() << "🔊 Audio output initialized. Player ready!";
 }
+
 
 MainWindow::~MainWindow()
 {
@@ -74,16 +78,35 @@ void MainWindow::on_actionExit_triggered()
 {
     QApplication::quit();
 }
+
+void MainWindow::on_actionAboutRetroBox_triggered()
+{
+    QString aboutText =
+        "<html><body><div style='text-align: center;'>"
+        "<img src=':/resources/retrobox_v1.png' width='150' height='150'/>"
+        "<h2>RetroBox</h2>"
+        "<p><b>Version:</b> 0.1.6</p>"
+        "<p><b>Build Date:</b> " __DATE__ " " __TIME__ "</p>"
+        "<p><b>Developer:</b> DiRTY</p>"
+        "<p>RetroBox is an open-source music player built with Qt.</p>"
+        "<p><a href='https://github.com/dirtymactruck/RetroBox'>GitHub Repository</a></p>"
+        "</div></body></html>";
+    QMessageBox msgBox;
+    msgBox.setWindowTitle("About RetroBox");
+    msgBox.setTextFormat(Qt::RichText);
+    msgBox.setText(aboutText);
+    msgBox.exec();
+}
+
 void MainWindow::on_actionOpenLibrary_triggered()
 {
     QString directoryPath = QFileDialog::getExistingDirectory(this, tr("Open Library"), "",
                                                               QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (directoryPath.isEmpty()) return;
 
-    ui->treeWidget->clear();  // ✅ Clear existing list
+    ui->listArtists->clear();  // ✅ Clear existing list
     trackList.clear();
-
-    QMap<QString, QMap<QString, QStringList>> musicLibrary; // ✅ Organized as Artist → Album → Tracks
+    musicLibrary.clear();
 
     QDirIterator it(directoryPath, {"*.mp3", "*.wav", "*.flac", "*.ogg"},
                     QDir::Files, QDirIterator::Subdirectories);
@@ -93,77 +116,59 @@ void MainWindow::on_actionOpenLibrary_triggered()
         QFileInfo fileInfo(filePath);
         QString fileName = fileInfo.fileName();
 
-        // Extract metadata
+        // ✅ Use a temporary QMediaPlayer to load metadata
         QMediaPlayer tempPlayer;
         tempPlayer.setSource(QUrl::fromLocalFile(filePath));
-        tempPlayer.metaDataChanged();  // Force metadata to load
 
-        QString artist = tempPlayer.metaData().value(QMediaMetaData::ContributingArtist).toString();
+        // ✅ Allow Qt time to process metadata asynchronously
+        QEventLoop loop;
+        connect(&tempPlayer, &QMediaPlayer::metaDataChanged, &loop, &QEventLoop::quit);
+        QTimer::singleShot(50, &loop, &QEventLoop::quit);  // Wait at most 50ms
+        loop.exec();
+
+        // ✅ Extract metadata
+        QString artist = tempPlayer.metaData().value(QMediaMetaData::ContributingArtist).toStringList().join(", ");
         QString album = tempPlayer.metaData().value(QMediaMetaData::AlbumTitle).toString();
         QString title = tempPlayer.metaData().value(QMediaMetaData::Title).toString();
 
-        // Fallback if metadata is empty
+        // ✅ Fallbacks if metadata is empty
         if (artist.isEmpty()) artist = "Unknown Artist";
         if (album.isEmpty()) album = "Unknown Album";
         if (title.isEmpty()) title = fileName;
 
-        // Store in hierarchical map
+        // ✅ Store in hierarchical map
         musicLibrary[artist][album].append(filePath);
     }
 
-    // ✅ Populate `QTreeWidget`
     for (const QString &artist : musicLibrary.keys()) {
-        QTreeWidgetItem *artistItem = new QTreeWidgetItem(ui->treeWidget);
-        artistItem->setText(0, artist);
-
-        for (const QString &album : musicLibrary[artist].keys()) {
-            QTreeWidgetItem *albumItem = new QTreeWidgetItem(artistItem);
-            albumItem->setText(0, album);
-
-            for (const QString &track : musicLibrary[artist][album]) {
-                QTreeWidgetItem *trackItem = new QTreeWidgetItem(albumItem);
-                trackItem->setText(0, QFileInfo(track).fileName());
-                trackItem->setData(0, Qt::UserRole, track);  // Store file path in the item
-            }
-        }
+        ui->listArtists->addItem(artist);
     }
+
+    qDebug() << "🎵 Library loaded successfully with correct metadata!";
 }
 
-void MainWindow::on_treeItemClicked(QTreeWidgetItem *item, int column)
-{
-    if (!item) return;
-
-    QString filePath = item->data(0, Qt::UserRole).toString(); // Retrieve stored path
-
-    if (!filePath.isEmpty()) {
-        qDebug() << "Selected song: " << filePath;
-    }
-}
-void MainWindow::on_treeItemDoubleClicked(QTreeWidgetItem *item, int column)
-{
-    if (!item) return;  // Ensure an item is selected
-
-    QString filePath = item->data(0, Qt::UserRole).toString();  // Retrieve stored path
-
-    if (!filePath.isEmpty()) {
-        qDebug() << "Playing selected song: " << filePath;
-        mediaPlayer->setSource(QUrl::fromLocalFile(filePath));  // Set the selected song
-        mediaPlayer->play();  // Play the song
-    }
-}
 void MainWindow::on_playButton_clicked()
 {
     if (mediaPlayer->playbackState() == QMediaPlayer::PlayingState) {
-        isPausedManually = true;  // ✅ Mark as manually paused
         mediaPlayer->pause();
-        qDebug() << "⏸ Playback paused at position:" << mediaPlayer->position();
+        qDebug() << "⏸ Playback paused.";
         ui->playButton->setText("▶ Play");
     }
-    else {
-        isPausedManually = false;  // ✅ Clear the flag when resuming
+    else if (mediaPlayer->playbackState() == QMediaPlayer::PausedState) {
         mediaPlayer->play();
-        qDebug() << "▶ Resuming playback from position:" << mediaPlayer->position();
+        qDebug() << "▶ Resumed playback.";
         ui->playButton->setText("⏸ Pause");
+    }
+    else {
+        QListWidgetItem *selectedTrack = ui->listTracks->currentItem();
+        if (!selectedTrack) {
+            qDebug() << "❌ No track selected!";
+            return;
+        }
+
+        on_trackSelected(selectedTrack);  // ✅ Load and play the selected track
+        mediaPlayer->play();  // ✅ Start playback
+        qDebug() << "▶ Playing selected track.";
     }
 }
 
@@ -175,31 +180,35 @@ void MainWindow::on_stopButton_clicked()
 
 void MainWindow::on_nextButton_clicked()
 {
-    playNext();  // Reuses existing playNext() function
-    qDebug() << "⏭ Playing next track.";
+    if (ui->listTracks->count() == 0) {
+        qDebug() << "❌ No tracks to play.";
+        return;
+    }
+
+    int nextIndex = ui->listTracks->currentRow() + 1;
+    if (nextIndex >= ui->listTracks->count()) {
+        nextIndex = 0;  // Loop back to first track
+    }
+
+    ui->listTracks->setCurrentRow(nextIndex);
+    on_trackSelected(ui->listTracks->currentItem());
 }
 
 void MainWindow::on_prevButton_clicked()
 {
-    if (trackList.isEmpty() || currentTrackIndex == -1) return;
-
-    currentTrackIndex--;  // Move to the previous track
-
-    if (currentTrackIndex < 0) {
-        currentTrackIndex = trackList.size() - 1;  // Loop back to last track
+    if (ui->listTracks->count() == 0) {
+        qDebug() << "❌ No tracks to play.";
+        return;
     }
 
-    QString prevTrackPath = trackList[currentTrackIndex];
-
-    if (!prevTrackPath.isEmpty()) {
-        qDebug() << "⏮ Playing previous track: " << prevTrackPath;
-        mediaPlayer->setSource(QUrl::fromLocalFile(prevTrackPath));
-        mediaPlayer->play();
+    int prevIndex = ui->listTracks->currentRow() - 1;
+    if (prevIndex < 0) {
+        prevIndex = ui->listTracks->count() - 1;  // Loop back to last track
     }
+
+    ui->listTracks->setCurrentRow(prevIndex);
+    on_trackSelected(ui->listTracks->currentItem());
 }
-
-
-
 
 void MainWindow::on_positionChanged(qint64 position)
 {
@@ -215,115 +224,139 @@ void MainWindow::on_durationChanged(qint64 duration)
 
 void MainWindow::on_metaDataChanged()
 {
-    if (mediaPlayer->metaData().isEmpty()) {
-        qDebug() << "Metadata not available!";
-        return;
-    }
-
-    QString title = mediaPlayer->metaData().value(QMediaMetaData::Title).toString();
-    QString artist = mediaPlayer->metaData().value(QMediaMetaData::ContributingArtist).toString();
-    QString album = mediaPlayer->metaData().value(QMediaMetaData::AlbumTitle).toString();
-    QString year;
-
-    if (!mediaPlayer->metaData().value(QMediaMetaData::Date).isNull()) {
-        year = mediaPlayer->metaData().value(QMediaMetaData::Date).toDate().toString("yyyy");
-    }
-
-    if (title.isEmpty()) title = "Unknown Title";
-    if (artist.isEmpty()) artist = "Unknown Artist";
-    if (album.isEmpty()) album = "Unknown Album";
-    if (year.isEmpty()) year = "Unknown Year";
-
-    titleLabel->setText("Title: " + title);
-    artistLabel->setText("Artist: " + artist);
-    albumLabel->setText("Album: " + album);
-    yearLabel->setText("Year: " + year);
+    if (mediaPlayer->metaData().isEmpty()) return;
+    titleLabel->setText("Title: " + mediaPlayer->metaData().value(QMediaMetaData::Title).toString());
+    artistLabel->setText("Artist: " + mediaPlayer->metaData().value(QMediaMetaData::ContributingArtist).toString());
+    albumLabel->setText("Album: " + mediaPlayer->metaData().value(QMediaMetaData::AlbumTitle).toString());
 }
 
 void MainWindow::on_mediaStatusChanged(QMediaPlayer::MediaStatus status)
 {
-    switch (status) {
-    case QMediaPlayer::NoMedia:
-        qDebug() << "No media loaded.";
-        break;
-    case QMediaPlayer::LoadingMedia:
-        qDebug() << "Loading media...";
-        break;
-    case QMediaPlayer::LoadedMedia:
-        qDebug() << "Media loaded.";
-        on_metaDataChanged();
-        break;
-    case QMediaPlayer::BufferingMedia:
-        qDebug() << "Buffering...";
-        break;
-    case QMediaPlayer::StalledMedia:
-        qDebug() << "Playback stalled.";
-        break;
-    case QMediaPlayer::EndOfMedia:
-        qDebug() << "End of media reached.";
+    if (status == QMediaPlayer::EndOfMedia) {
         playNext();
-        break;
-    case QMediaPlayer::InvalidMedia:
-        qDebug() << "Invalid media.";
-        break;
-    default:
-        break;
     }
 }
 
 void MainWindow::playNext()
 {
-    if (trackList.isEmpty() || currentTrackIndex == -1) {
-        qDebug() << "No tracks in the playlist or invalid index.";
-        return;
-    }
+    qDebug() << "Playing next track...";
+}
 
-    currentTrackIndex++;
+void MainWindow::on_artistSelected(QListWidgetItem *item)
+{
+    if (!item) return;
 
-    if (currentTrackIndex >= trackList.size()) {
-        currentTrackIndex = 0;
-    }
+    QString artist = item->text();
+    qDebug() << "🎶 Selected Artist: " << artist;  // Debugging output
 
-    QString nextTrackPath = trackList[currentTrackIndex];
+    ui->listAlbums->clear();  // ✅ Clear previous albums
+    ui->listTracks->clear();  // ✅ Clear previous tracks
 
-    if (!nextTrackPath.isEmpty()) {
-        qDebug() << "Now playing next track: " << nextTrackPath;
-        mediaPlayer->setSource(QUrl::fromLocalFile(nextTrackPath));
-        mediaPlayer->play();
+    // ✅ Ensure the artist exists in musicLibrary before accessing
+    if (musicLibrary.contains(artist)) {
+        for (const QString &album : musicLibrary[artist].keys()) {
+            ui->listAlbums->addItem(album);
+        }
+    } else {
+        qDebug() << "❌ Artist not found in musicLibrary!";
     }
 }
-void MainWindow::playSelectedSong(QTreeWidgetItem *item, int column)
+void MainWindow::on_albumSelected(QListWidgetItem *item)
 {
-    if (!item) return;  // Ensure an item is selected
+    if (!item) return;
 
-    QString filePath = item->data(0, Qt::UserRole).toString();  // Retrieve stored path
+    QString album = item->text();
+    QString artist = ui->listArtists->currentItem()->text(); // Get selected artist
 
+    qDebug() << "📀 Selected Album: " << album << " by " << artist;
+
+    ui->listTracks->clear();  // ✅ Clear previous track list
+
+    // ✅ Ensure album exists in library
+    if (musicLibrary.contains(artist) && musicLibrary[artist].contains(album)) {
+        QVector<QPair<int, QString>> sortedTracks;  // ✅ Store (trackNumber, filePath)
+
+        for (const QString &track : musicLibrary[artist][album]) {
+            QMediaPlayer tempPlayer;
+            tempPlayer.setSource(QUrl::fromLocalFile(track));
+
+            QEventLoop loop;
+            connect(&tempPlayer, &QMediaPlayer::metaDataChanged, &loop, &QEventLoop::quit);
+            QTimer::singleShot(50, &loop, &QEventLoop::quit);
+            loop.exec();
+
+            int trackNumber = tempPlayer.metaData().value(QMediaMetaData::TrackNumber).toInt();
+            if (trackNumber == 0) trackNumber = 9999; // ✅ Default if track number missing
+            sortedTracks.append(qMakePair(trackNumber, track));
+        }
+
+        // ✅ Sort tracks by track number
+        std::sort(sortedTracks.begin(), sortedTracks.end(),
+                  [](const QPair<int, QString> &a, const QPair<int, QString> &b) {
+                      return a.first < b.first;
+                  });
+
+        // ✅ Populate sorted track list
+        for (const auto &pair : sortedTracks) {
+            QListWidgetItem *trackItem = new QListWidgetItem(QFileInfo(pair.second).fileName());
+            trackItem->setData(Qt::UserRole, pair.second);  // ✅ Store file path in item
+            ui->listTracks->addItem(trackItem);
+            qDebug() << "🎵 Added Track: " << QFileInfo(pair.second).fileName() << " (#" << pair.first << ")";
+        }
+    } else {
+        qDebug() << "❌ Album not found in musicLibrary!";
+    }
+}
+
+void MainWindow::on_trackSelected(QListWidgetItem *item)
+{
+    if (!item) return;
+
+    QString filePath = item->data(Qt::UserRole).toString();
     if (!filePath.isEmpty()) {
-        qDebug() << "Playing selected song: " << filePath;
-        mediaPlayer->setSource(QUrl::fromLocalFile(filePath));  // Set the selected song
-        mediaPlayer->play();  // Play the song
+        qDebug() << "🎵 Track selected: " << filePath;
+
+        mediaPlayer->setSource(QUrl::fromLocalFile(filePath));  // ✅ Load file into media player
+
+        // ✅ Extract metadata for display
+        QMediaPlayer tempPlayer;
+        tempPlayer.setSource(QUrl::fromLocalFile(filePath));
+
+        QEventLoop loop;
+        connect(&tempPlayer, &QMediaPlayer::metaDataChanged, &loop, &QEventLoop::quit);
+        QTimer::singleShot(50, &loop, &QEventLoop::quit);
+        loop.exec();
+
+        QString title = tempPlayer.metaData().value(QMediaMetaData::Title).toString();
+        QString artist = tempPlayer.metaData().value(QMediaMetaData::ContributingArtist).toString();
+        QString album = tempPlayer.metaData().value(QMediaMetaData::AlbumTitle).toString();
+        QString year;
+
+        if (!tempPlayer.metaData().value(QMediaMetaData::Date).isNull()) {
+            year = tempPlayer.metaData().value(QMediaMetaData::Date).toDate().toString("yyyy");
+        }
+
+        // ✅ Fallbacks for missing metadata
+        if (title.isEmpty()) title = QFileInfo(filePath).fileName();
+        if (artist.isEmpty()) artist = "Unknown Artist";
+        if (album.isEmpty()) album = "Unknown Album";
+        if (year.isEmpty()) year = "Unknown Year";
+
+        // ✅ Update "Now Playing" section
+        nowPlayingLabel->setText("Now Playing: " + title);
+        titleLabel->setText("Title: " + title);
+        artistLabel->setText("Artist: " + artist);
+        albumLabel->setText("Album: " + album);
+        yearLabel->setText("Year: " + year);
+
+        // ✅ Play the track if the player is already in play mode
+        if (mediaPlayer->playbackState() != QMediaPlayer::PlayingState) {
+            mediaPlayer->play();
+            qDebug() << "▶ Auto-playing after selection.";
+        }
+    } else {
+        qDebug() << "❌ No file path found for selected track!";
     }
 }
-void MainWindow::on_actionAboutRetroBox_triggered()
-{
-    QString aboutText =
-        "<html>"
-        "<body>"
-        "<div style='text-align: center;'>"
-        "<img src=':/resources/retrobox_v1.png' width='150' height='150'/>"  // ✅ Updated path
-        "<h2>RetroBox</h2>"
-        "<p><b>Version:</b> 0.1.2</p>"
-        "<p><b>Build Date:</b> " __DATE__ " " __TIME__ "</p>"
-        "<p><b>Developer:</b>DiRTY</p>"
-        "<p>RetroBox is an open-source music player built with Qt.</p>"
-        "<p><a href='https://github.com/dirtymactruck/RetroBox'>GitHub Repository</a></p>"
-        "</div>"
-        "</body>"
-        "</html>";
 
-    QMessageBox msgBox;
-    msgBox.setWindowTitle("About RetroBox");
-    msgBox.setTextFormat(Qt::RichText);  // ✅ Enables HTML rendering
-    msgBox.setText(aboutText);
-    msgBox.exec();
-}
+

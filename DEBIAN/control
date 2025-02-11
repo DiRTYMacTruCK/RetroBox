@@ -1,0 +1,8 @@
+Package: retrobox
+Version: 0.1.5
+Section: multimedia
+Priority: optional
+Architecture: amd64
+Depends: qt6-multimedia, qt6-base, libqt6widgets6, libqt6core6
+Maintainer: DiRTY dirtymactruck@gmail.com
+Description: RetroBox - A simple Qt-based music player.

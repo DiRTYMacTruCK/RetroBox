@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
+    <width>955</width>
     <height>600</height>
    </rect>
   </property>
@@ -18,7 +18,7 @@
     <property name="geometry">
      <rect>
       <x>490</x>
-      <y>310</y>
+      <y>450</y>
       <width>91</width>
       <height>31</height>
      </rect>
@@ -31,7 +31,7 @@
     <property name="geometry">
      <rect>
       <x>440</x>
-      <y>310</y>
+      <y>450</y>
       <width>41</width>
       <height>31</height>
      </rect>
@@ -43,8 +43,8 @@
    <widget class="QPushButton" name="nextButton">
     <property name="geometry">
      <rect>
-      <x>590</x>
-      <y>310</y>
+      <x>580</x>
+      <y>450</y>
       <width>51</width>
       <height>31</height>
      </rect>
@@ -57,7 +57,7 @@
     <property name="geometry">
      <rect>
       <x>390</x>
-      <y>310</y>
+      <y>450</y>
       <width>41</width>
       <height>31</height>
      </rect>
@@ -66,33 +66,35 @@
      <string>Last</string>
     </property>
    </widget>
-   <widget class="QTreeWidget" name="treeWidget">
+   <widget class="QListWidget" name="listArtists">
     <property name="geometry">
      <rect>
-      <x>280</x>
-      <y>10</y>
-      <width>491</width>
-      <height>281</height>
+      <x>290</x>
+      <y>90</y>
+      <width>111</width>
+      <height>321</height>
      </rect>
     </property>
-    <property name="columnCount">
-     <number>3</number>
+   </widget>
+   <widget class="QListWidget" name="listAlbums">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>90</y>
+      <width>171</width>
+      <height>321</height>
+     </rect>
     </property>
-    <column>
-     <property name="text">
-      <string>Artist</string>
-     </property>
-    </column>
-    <column>
-     <property name="text">
-      <string>Album</string>
-     </property>
-    </column>
-    <column>
-     <property name="text">
-      <string>Track</string>
-     </property>
-    </column>
+   </widget>
+   <widget class="QListWidget" name="listTracks">
+    <property name="geometry">
+     <rect>
+      <x>570</x>
+      <y>90</y>
+      <width>256</width>
+      <height>321</height>
+     </rect>
+    </property>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -100,7 +102,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>955</width>
      <height>23</height>
     </rect>
    </property>

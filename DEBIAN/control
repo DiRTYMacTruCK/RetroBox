@@ -1,5 +1,5 @@
-Package: retrobox
-Version: 0.1.5
+Package: RetroBox
+Version: 0.1.6
 Section: multimedia
 Priority: optional
 Architecture: amd64

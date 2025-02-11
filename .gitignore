@@ -15,4 +15,9 @@ Makefile
 *.a
 *.exe
 *.dll
+*.deb
 RetroBox
+
+# Ignore deb build
+DEBIAN/
+archive/
